@@ -1,6 +1,9 @@
 use ahash::{AHashMap, AHashSet};
 use cid::Cid;
 use libp2p::PeerId;
+use std::time::Duration;
+use tokio::time::Instant;
+use tracing::log::warn;
 use tracing::{debug, error};
 
 use super::message_queue::MessageQueue;
@@ -89,6 +92,8 @@ impl PeerWantManager {
         self.broadcast_wants.extend(unsent.clone());
 
         let mut peer_unsent = AHashSet::new();
+        let mut peer_states = vec![];
+
         for (peer, peer_wants) in self.peer_wants.iter() {
             for cid in &unsent {
                 // Skip if already sent to this peer
@@ -99,15 +104,30 @@ impl PeerWantManager {
 
             if !peer_unsent.is_empty() {
                 if let Some(peer_state) = peer_queues.get(peer) {
-                    peer_state
-                        .message_queue
-                        .add_broadcast_want_haves(&peer_unsent)
-                        .await;
+                    peer_states.push((peer_state, peer_unsent.clone()))
                 }
             }
 
             // clear for reuse
             peer_unsent.clear();
+        }
+
+        peer_states.sort_by(|a, b| b.0.blocks_counter.cmp(&a.0.blocks_counter));
+        if let Some(peer_state) = peer_states.get(0) {
+            let peer_state = peer_state.0;
+            if peer_state.blocks_counter > 0 {
+                if let Some(last_responded_at) = peer_state.last_responded_at {
+                    if last_responded_at.elapsed() < Duration::from_secs(30) {
+                        peer_states = peer_states[0..std::cmp::min(15, peer_states.len())].to_vec();
+                    }
+                }
+            }
+        }
+        for (peer_state, peer_unsent) in peer_states {
+            peer_state
+                .message_queue
+                .add_broadcast_want_haves(&peer_unsent)
+                .await;
         }
     }
 

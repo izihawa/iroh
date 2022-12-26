@@ -430,7 +430,7 @@ impl LoopState {
                                         .map(|_| provider)
                                 }
                             })
-                            // Notify the session about successfull ones.
+                            // Notify the session about successful ones.
                             .for_each_concurrent(None, |provider| {
                                 inc!(BitswapMetrics::ProvidersTotal);
                                 debug!("found provider for {}: {}", cid, provider);
