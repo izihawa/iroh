@@ -121,16 +121,18 @@ impl BasicDirectory {
                 let parts = entry.encode().await?;
                 tokio::pin!(parts);
                 let mut root = None;
+                let mut size = 0u64;
                 while let Some(part) = parts.next().await {
                     let block = part?;
                     root = Some(block.clone());
+                    size += block.data().len() as u64;
                     yield block;
                 }
                 let root_block = root.expect("file must not be empty");
                 links.push(dag_pb::PbLink {
                     hash: Some(root_block.cid().to_bytes()),
                     name: Some(name),
-                    tsize: Some(root_block.data().len() as u64),
+                    tsize: Some(size),
                 });
             }
 
