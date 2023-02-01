@@ -10,7 +10,6 @@ rust-version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-channel.workspace = true
 async-recursion.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
@@ -23,6 +22,7 @@ futures.workspace = true
 iroh-metrics = { workspace = true, features = ["resolver", "gateway"] }
 iroh-rpc-client.workspace = true
 iroh-util.workspace = true
+kanal.workspace = true
 libipld.workspace = true
 libp2p = { workspace = true, features = ["serde"] }
 multihash.workspace = true

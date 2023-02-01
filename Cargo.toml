@@ -106,6 +106,7 @@ iroh-rpc-types = { version = "0.2.0", path = "./iroh-rpc-types" }
 iroh-store = { version = "0.2.0", path = "./iroh-store" }
 iroh-unixfs = { version = "0.2.0", path = "./iroh-unixfs" }
 iroh-util = { version = "0.2.0", path = "./iroh-util" }
+kanal = "0.1.0-pre8"
 keyed_priority_queue = "0.4.1"
 lazy_static = "1.4"
 libipld = "0.15"

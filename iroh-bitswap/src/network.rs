@@ -323,8 +323,7 @@ impl Network {
         inc!(BitswapMetrics::NetworkPollTick);
         match Pin::new(&mut self.network_out_receiver).poll_next(cx) {
             Poll::Ready(Some(ev)) => Poll::Ready(ev),
-            Poll::Ready(None) => Poll::Pending,
-            Poll::Pending => Poll::Pending,
+            _ => Poll::Pending,
         }
     }
 }

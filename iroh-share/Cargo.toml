@@ -24,6 +24,7 @@ iroh-rpc-types.workspace = true
 iroh-store.workspace = true
 iroh-unixfs.workspace = true
 iroh-util.workspace = true
+kanal.workspace = true
 libp2p = { workspace = true, features = ["gossipsub"] }
 multibase.workspace = true
 rand.workspace = true

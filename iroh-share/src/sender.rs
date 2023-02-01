@@ -8,7 +8,6 @@ use iroh_p2p::{GossipsubEvent, NetworkEvent};
 use iroh_unixfs::builder::{DirectoryBuilder, FileBuilder};
 use libp2p::gossipsub::Sha256Topic;
 use rand::Rng;
-use tokio::sync::mpsc::{channel, Receiver};
 use tokio::task::JoinHandle;
 use tracing::{debug, info, warn};
 
@@ -21,17 +20,17 @@ use crate::{
 #[derive(Debug)]
 pub struct Sender {
     p2p: P2pNode,
-    gossip_events: Receiver<GossipsubEvent>,
+    gossip_events: kanal::AsyncReceiver<GossipsubEvent>,
     gossip_task: JoinHandle<()>,
 }
 
 impl Sender {
     pub async fn new(port: u16, db_path: &Path) -> Result<Self> {
-        let (p2p, mut events) = P2pNode::new(port, db_path).await?;
-        let (s, r) = channel(1024);
+        let (p2p, events) = P2pNode::new(port, db_path).await?;
+        let (s, r) = kanal::bounded_async(1024);
 
         let gossip_task = tokio::task::spawn(async move {
-            while let Some(event) = events.recv().await {
+            while let Ok(event) = events.recv().await {
                 if let NetworkEvent::Gossipsub(e) = event {
                     // drop events if they are not processed
                     s.try_send(e).ok();
@@ -53,7 +52,7 @@ impl Sender {
         let id = self.next_id();
         let Sender {
             p2p,
-            mut gossip_events,
+            gossip_events,
             gossip_task,
         } = self;
 
@@ -86,7 +85,7 @@ impl Sender {
         let p2p2 = p2p_rpc.clone();
         let gossip_task_source = tokio::task::spawn(async move {
             let mut current_peer = None;
-            while let Some(event) = gossip_events.recv().await {
+            while let Ok(event) = gossip_events.recv().await {
                 match event {
                     GossipsubEvent::Subscribed { peer_id, topic } => {
                         if topic == th && current_peer.is_none() {

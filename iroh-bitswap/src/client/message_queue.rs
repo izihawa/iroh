@@ -9,7 +9,7 @@ use cid::Cid;
 use iroh_metrics::core::MRecorder;
 use iroh_metrics::{bitswap::BitswapMetrics, inc};
 use libp2p::PeerId;
-use tokio::{sync::mpsc, task::JoinHandle};
+use tokio::task::JoinHandle;
 use tracing::{debug, error, warn};
 
 use crate::{
@@ -27,8 +27,8 @@ mod wantlist;
 #[derive(Debug)]
 pub struct MessageQueue {
     peer: PeerId,
-    sender_responses: Option<mpsc::Sender<Vec<Cid>>>,
-    sender_wants: Option<mpsc::Sender<WantsUpdate>>,
+    sender_responses: Option<kanal::AsyncSender<Vec<Cid>>>,
+    sender_wants: Option<kanal::AsyncSender<WantsUpdate>>,
     worker: JoinHandle<()>,
 }
 
@@ -97,8 +97,8 @@ impl MessageQueue {
         config: Config,
         on_dont_have_timeout: Arc<dyn DontHaveTimeout>,
     ) -> Self {
-        let (sender_responses, receiver_responses) = mpsc::channel(64);
-        let (sender_wants, receiver_wants) = mpsc::channel(2048);
+        let (sender_responses, receiver_responses) = kanal::bounded_async(64);
+        let (sender_wants, receiver_wants) = kanal::bounded_async(2048);
 
         let actor = MessageQueueActor::new(
             config,
@@ -238,10 +238,10 @@ async fn run(mut actor: MessageQueueActor) {
             message = actor.receiver_wants.recv() => {
                 debug!("{}: {:?}", actor.peer, message);
                 match message {
-                    Some(wants_update) => {
+                    Ok(wants_update) => {
                         actor.handle_wants_update(wants_update).await;
                     }
-                    None => {
+                    Err(_) => {
                         // Shutdown
                         break;
                     }
@@ -250,10 +250,10 @@ async fn run(mut actor: MessageQueueActor) {
             message = actor.receiver_responses.recv() => {
                 debug!("{}: {:?}", actor.peer, message);
                 match message {
-                    Some(responses) => {
+                    Ok(responses) => {
                         actor.handle_response(responses).await;
                     }
-                    None => {
+                    Err(_) => {
                         // Shutdown
                         break;
                     }
@@ -265,7 +265,7 @@ async fn run(mut actor: MessageQueueActor) {
                     break;
                 }
             }
-            Some(when) = actor.outgoing_work.1.recv() => {
+            Ok(when) = actor.outgoing_work.1.recv() => {
                 if work_scheduled.is_none() {
                     // No work, record when the work was scheduled.
                     work_scheduled = Some(when);
@@ -317,12 +317,12 @@ struct MessageQueueActor {
     config: Config,
     wants: Wants,
     dh_timeout_manager: DontHaveTimeoutManager,
-    outgoing_work: (mpsc::Sender<Instant>, mpsc::Receiver<Instant>),
+    outgoing_work: (kanal::AsyncSender<Instant>, kanal::AsyncReceiver<Instant>),
     sender: Option<MessageSender>,
     network: Network,
     msg_sender_config: MessageSenderConfig,
-    receiver_responses: mpsc::Receiver<Vec<Cid>>,
-    receiver_wants: mpsc::Receiver<WantsUpdate>,
+    receiver_responses: kanal::AsyncReceiver<Vec<Cid>>,
+    receiver_wants: kanal::AsyncReceiver<WantsUpdate>,
 }
 
 impl MessageQueueActor {
@@ -330,11 +330,11 @@ impl MessageQueueActor {
         config: Config,
         network: Network,
         peer: PeerId,
-        receiver_responses: mpsc::Receiver<Vec<Cid>>,
-        receiver_wants: mpsc::Receiver<WantsUpdate>,
+        receiver_responses: kanal::AsyncReceiver<Vec<Cid>>,
+        receiver_wants: kanal::AsyncReceiver<WantsUpdate>,
         on_dont_have_timeout: Arc<dyn DontHaveTimeout>,
     ) -> Self {
-        let outgoing_work = mpsc::channel(2);
+        let outgoing_work = kanal::bounded_async(2);
         let wants = Wants {
             bcst_wants: Default::default(),
             peer_wants: Default::default(),

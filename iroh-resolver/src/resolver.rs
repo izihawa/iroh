@@ -591,7 +591,7 @@ pub struct Resolver<T: ContentLoader> {
     dns_resolver: Arc<DnsResolver>,
     next_id: Arc<AtomicU64>,
     _worker: Arc<JoinHandle<()>>,
-    session_closer: async_channel::Sender<ContextId>,
+    session_closer: kanal::AsyncSender<ContextId>,
 }
 
 impl<T: ContentLoader> Resolver<T> {
@@ -600,7 +600,7 @@ impl<T: ContentLoader> Resolver<T> {
     }
 
     pub fn with_dns_resolver(loader: T, dns_resolver_config: Config) -> Self {
-        let (session_closer_s, session_closer_r) = async_channel::bounded(2048);
+        let (session_closer_s, session_closer_r) = kanal::bounded_async(2048);
         let loader_thread = loader.clone();
         let worker = tokio::task::spawn(async move {
             // GC Loop for sessions

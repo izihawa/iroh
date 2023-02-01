@@ -45,7 +45,7 @@ struct Inner<T: Topic, D: Data, TM: TaskMerger<T, D>> {
     ignore_freezing: bool,
     task_merger: TM,
     max_outstanding_work_per_peer: usize,
-    hooks: Vec<async_channel::Sender<Event>>,
+    hooks: Vec<kanal::AsyncSender<Event>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -78,8 +78,8 @@ impl<T: Topic, D: Data, TM: TaskMerger<T, D>> PeerTaskQueue<T, D, TM> {
     }
 
     /// Adds a hook to be notified on `Event`s.
-    pub async fn add_hook(&self, cap: usize) -> async_channel::Receiver<Event> {
-        let (s, r) = async_channel::bounded(cap);
+    pub async fn add_hook(&self, cap: usize) -> kanal::AsyncReceiver<Event> {
+        let (s, r) = kanal::bounded_async(cap);
         let mut this = self.inner.lock().await;
         this.hooks.push(s);
 
@@ -591,7 +591,7 @@ mod tests {
 
         assert_eq!(hook.recv().await.unwrap(), Event::PeerRemoved(b));
         assert_eq!(hook.recv().await.unwrap(), Event::PeerRemoved(a));
-        assert!(hook.try_recv().is_err());
+        assert!(hook.try_recv().unwrap().is_none());
     }
 
     #[tokio::test]

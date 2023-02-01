@@ -7,7 +7,7 @@ use derivative::Derivative;
 use futures::{future::BoxFuture, FutureExt};
 use iroh_metrics::{bitswap::BitswapMetrics, core::MRecorder, inc};
 use libp2p::PeerId;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 use tracing::{debug, error, trace, warn};
 
 use crate::network::Network;
@@ -16,7 +16,7 @@ use super::{message_queue::MessageQueue, peer_want_manager::PeerWantManager, ses
 
 #[derive(Debug, Clone)]
 pub struct PeerManager {
-    sender: mpsc::Sender<Message>,
+    sender: kanal::AsyncSender<Message>,
 }
 
 #[derive(Derivative)]
@@ -89,7 +89,7 @@ impl<F: Fn(PeerId, Vec<Cid>) -> BoxFuture<'static, ()> + 'static + Sync + Send> 
 
 impl PeerManager {
     pub async fn new(self_id: PeerId, network: Network) -> Self {
-        let (sender, receiver) = mpsc::channel(2048);
+        let (sender, receiver) = kanal::bounded_async(2048);
         let actor = PeerManagerActor::new(self_id, network, receiver).await;
 
         let _worker = tokio::task::spawn(async move {
@@ -308,96 +308,96 @@ async fn run(mut actor: PeerManagerActor) {
         tokio::select! {
             message = actor.receiver.recv() => {
                 match message {
-                    Some(Message::GetConnectedPeers(r)) => {
+                    Ok(Message::GetConnectedPeers(r)) => {
                         let _= r.send(actor.connected_peers().await);
                     },
-                    Some(Message::GetCurrentWants(r)) => {
+                    Ok(Message::GetCurrentWants(r)) => {
                         let _ = r.send(actor.current_wants());
                     },
-                    Some(Message::GetCurrentWantBlocks(r)) => {
+                    Ok(Message::GetCurrentWantBlocks(r)) => {
                         let _ = r.send(actor.current_want_blocks());
                     },
-                    Some(Message::GetCurrentWantHaves(r)) => {
+                    Ok(Message::GetCurrentWantHaves(r)) => {
                         let _ = r.send(actor.current_want_haves());
                     },
-                    Some(Message::Connected(peer)) => {
+                    Ok(Message::Connected(peer)) => {
                         actor.connected(peer).await;
                     },
-                    Some(Message::Disconnected(peer)) => {
+                    Ok(Message::Disconnected(peer)) => {
                         actor.disconnected(peer).await;
                     },
-                    Some(Message::ResponseReceived(peer, responses)) => {
+                    Ok(Message::ResponseReceived(peer, responses)) => {
                         actor.response_received(peer, responses).await;
                     },
-                    Some(Message::BroadcastWantHaves(list)) => {
+                    Ok(Message::BroadcastWantHaves(list)) => {
                         actor.broadcast_want_haves(list).await;
                     },
-                    Some(Message::SendWants {
+                    Ok(Message::SendWants {
                         peer,
                         want_blocks,
                         want_haves,
                     }) => {
                         actor.send_wants(peer, want_blocks, want_haves).await;
                     },
-                    Some(Message::SendCancels(cancels)) => {
+                    Ok(Message::SendCancels(cancels)) => {
                         actor.send_cancels(cancels).await;
                     },
-                    Some(Message::RegisterSession { peer, signaler, response }) => {
+                    Ok(Message::RegisterSession { peer, signaler, response }) => {
                         let _ = response.send(actor.register_session(peer, signaler).await);
                     },
-                    Some(Message::UnregisterSession(session, response)) => {
+                    Ok(Message::UnregisterSession(session, response)) => {
                         actor.unregister_session(session, response).await;
                     },
-                    Some(Message::SetCb(cb)) => {
+                    Ok(Message::SetCb(cb)) => {
                         actor.on_dont_have_timeout = cb;
                     }
-                    Some(Message::AddPeerToSession{
+                    Ok(Message::AddPeerToSession{
                         session,
                         peer,
                         response,
                     }) => {
                         actor.add_peer_to_session(session, peer, response).await;
                     },
-                    Some(Message::RemovePeerFromSession{
+                    Ok(Message::RemovePeerFromSession{
                         session,
                         peer,
                         response,
                     }) => {
                         actor.remove_peer_from_session(session, peer, response).await;
                     },
-                    Some(Message::ProtectConnection{
+                    Ok(Message::ProtectConnection{
                         session,
                         peer,
                         response,
                     }) => {
                         actor.protect_connection(session, peer, response).await;
                     },
-                    Some(Message::PeersDiscoveredForSession{
+                    Ok(Message::PeersDiscoveredForSession{
                         session,
                         response,
                     }) => {
                         actor.peers_discovered_for_session(session, response).await;
                     },
-                    Some(Message::PeersForSession{
+                    Ok(Message::PeersForSession{
                         session,
                         response,
                     }) => {
                         actor.peers_for_session(session, response).await;
                     },
-                    Some(Message::SessionHasPeers{
+                    Ok(Message::SessionHasPeers{
                         session,
                         response,
                     }) => {
                         actor.session_has_peers(session, response).await;
                     },
-                    Some(Message::SessionHasPeer{
+                    Ok(Message::SessionHasPeer{
                         session,
                         peer,
                         response,
                     }) => {
                         actor.session_has_peer(session, peer, response).await;
                     },
-                    None => {
+                    Err(_) => {
                         break;
                     }
                 }
@@ -413,7 +413,7 @@ async fn run(mut actor: PeerManagerActor) {
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct PeerManagerActor {
-    receiver: mpsc::Receiver<Message>,
+    receiver: kanal::AsyncReceiver<Message>,
     peers: AHashMap<PeerId, PeerState>,
     peer_want_manager: PeerWantManager,
     sessions: AHashMap<u64, SessionState>,
@@ -439,7 +439,11 @@ struct SessionState {
 }
 
 impl PeerManagerActor {
-    async fn new(self_id: PeerId, network: Network, receiver: mpsc::Receiver<Message>) -> Self {
+    async fn new(
+        self_id: PeerId,
+        network: Network,
+        receiver: kanal::AsyncReceiver<Message>,
+    ) -> Self {
         Self {
             self_id,
             receiver,

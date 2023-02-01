@@ -103,7 +103,7 @@ pub struct SessionWantSender {
     /// The session ID
     session_id: u64,
     /// A channel that collects incoming changes (events)
-    changes: async_channel::Sender<Change>,
+    changes: kanal::AsyncSender<Change>,
     closer: oneshot::Sender<()>,
     worker: JoinHandle<()>,
 }
@@ -111,7 +111,7 @@ pub struct SessionWantSender {
 #[derive(Debug, Clone)]
 pub struct Signaler {
     id: u64,
-    changes: async_channel::Sender<Change>,
+    changes: kanal::AsyncSender<Change>,
 }
 
 impl Signaler {
@@ -125,7 +125,7 @@ impl Signaler {
     }
 }
 
-fn signal_availability(changes: async_channel::Sender<Change>, peer: PeerId, is_available: bool) {
+fn signal_availability(changes: kanal::AsyncSender<Change>, peer: PeerId, is_available: bool) {
     let availability = PeerAvailability {
         target: peer,
         is_available,
@@ -142,10 +142,10 @@ impl SessionWantSender {
         peer_manager: PeerManager,
         session_manager: SessionManager,
         block_presence_manager: BlockPresenceManager,
-        session_ops: async_channel::Sender<super::Op>,
+        session_ops: kanal::AsyncSender<super::Op>,
     ) -> Self {
         debug!("session:{}: session_want_sender create", session_id);
-        let (changes_s, changes_r) = async_channel::bounded(64);
+        let (changes_s, changes_r) = kanal::bounded_async(64);
         let (closer_s, mut closer_r) = oneshot::channel();
 
         let signaler = Signaler {
@@ -380,7 +380,7 @@ impl WantInfo {
 
 #[derive(Debug)]
 struct LoopState {
-    changes: async_channel::Receiver<Change>,
+    changes: kanal::AsyncReceiver<Change>,
     signaler: Signaler,
     /// Information about each want indexed by CID.
     wants: AHashMap<Cid, WantInfo>,
@@ -396,17 +396,17 @@ struct LoopState {
     session_manager: SessionManager,
     /// Keeps track of which peer has / doesn't have a block.
     block_presence_manager: BlockPresenceManager,
-    session_ops: async_channel::Sender<super::Op>,
+    session_ops: kanal::AsyncSender<super::Op>,
 }
 
 impl LoopState {
     fn new(
-        changes: async_channel::Receiver<Change>,
+        changes: kanal::AsyncReceiver<Change>,
         signaler: Signaler,
         peer_manager: PeerManager,
         session_manager: SessionManager,
         block_presence_manager: BlockPresenceManager,
-        session_ops: async_channel::Sender<super::Op>,
+        session_ops: kanal::AsyncSender<super::Op>,
     ) -> Self {
         LoopState {
             changes,
@@ -436,7 +436,7 @@ impl LoopState {
     /// Collects all the changes that have occurred since the last invocation of `on_change`.
     fn collect_changes(&self, changes: &mut Vec<Change>) {
         while changes.len() < CHANGES_BUFFER_SIZE {
-            if let Ok(change) = self.changes.try_recv() {
+            if let Ok(Some(change)) = self.changes.try_recv() {
                 changes.push(change);
             } else {
                 break;

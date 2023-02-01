@@ -51,11 +51,7 @@ struct PendingWant {
 pub struct DontHaveTimeoutManager {
     max_timeout: Duration,
     message_latency_multiplier: f64,
-    worker: Option<(
-        async_channel::Sender<()>,
-        oneshot::Sender<()>,
-        JoinHandle<()>,
-    )>,
+    worker: Option<(kanal::AsyncSender<()>, oneshot::Sender<()>, JoinHandle<()>)>,
     inner: Arc<Mutex<Inner>>,
 }
 
@@ -106,7 +102,7 @@ impl DontHaveTimeoutManager {
 
         // measure ping latency
         let i = self.inner.clone();
-        let (trigger_s, trigger_r) = async_channel::bounded(16);
+        let (trigger_s, trigger_r) = kanal::bounded_async(16);
         let ts = trigger_s.clone();
         let target = i.lock().await.target;
         let worker = tokio::task::spawn(async move {

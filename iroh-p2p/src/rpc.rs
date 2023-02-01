@@ -32,11 +32,11 @@ use crate::VERSION;
 
 #[derive(Clone)]
 pub(crate) struct P2p {
-    sender: Sender<RpcMessage>,
+    sender: kanal::AsyncSender<RpcMessage>,
 }
 
 impl P2p {
-    pub fn new(sender: Sender<RpcMessage>) -> Self {
+    pub fn new(sender: kanal::AsyncSender<RpcMessage>) -> Self {
         Self { sender }
     }
 

@@ -63,7 +63,7 @@ struct Inner {
     id: u64,
     session_manager: SessionManager,
     session_interest_manager: SessionInterestManager,
-    incoming: async_channel::Sender<Op>,
+    incoming: kanal::AsyncSender<Op>,
     closer: oneshot::Sender<()>,
     worker: JoinHandle<()>,
     notify: async_broadcast::Sender<Block>,
@@ -83,7 +83,7 @@ impl Session {
         periodic_search_delay: Duration,
     ) -> Self {
         info!("creating session {}", id);
-        let (incoming_s, incoming_r) = async_channel::bounded(128);
+        let (incoming_s, incoming_r) = kanal::bounded_async(128);
 
         let session_want_sender = SessionWantSender::new(
             id,
@@ -299,7 +299,7 @@ impl Session {
         ensure!(!keys.is_empty(), "missing keys");
         debug!("get blocks: {:?}", keys);
 
-        let (s, r) = async_channel::bounded(8);
+        let (s, r) = kanal::bounded_async(8);
         let mut remaining: AHashSet<Cid> = keys.iter().copied().collect();
         let mut block_channel = self.inner.notify.new_receiver();
         let incoming = self.inner.incoming.clone();
@@ -359,7 +359,6 @@ impl Session {
         });
 
         self.inner.incoming.send(Op::Want(keys.to_vec())).await?;
-
         Ok(BlockReceiver {
             receiver: r,
             guard: BlockReceiverGuard {
@@ -396,7 +395,7 @@ impl LoopState {
         network: Network,
         peer_manager: PeerManager,
         initial_search_delay: Duration,
-        incoming: async_channel::Sender<Op>,
+        incoming: kanal::AsyncSender<Op>,
     ) -> Self {
         let idle_tick = Box::pin(tokio::time::sleep(initial_search_delay));
         let mut task_controller = tokio_context::task::TaskController::new();
@@ -665,7 +664,7 @@ impl LatencyTracker {
 #[derive(Debug)]
 pub struct BlockReceiver {
     /// Receives the results.
-    receiver: async_channel::Receiver<Block>,
+    receiver: kanal::AsyncReceiver<Block>,
     guard: BlockReceiverGuard,
 }
 #[derive(Debug)]
@@ -685,13 +684,13 @@ impl Drop for BlockReceiverGuard {
 }
 
 impl BlockReceiver {
-    pub fn into_parts(self) -> (async_channel::Receiver<Block>, BlockReceiverGuard) {
+    pub fn into_parts(self) -> (kanal::AsyncReceiver<Block>, BlockReceiverGuard) {
         (self.receiver, self.guard)
     }
 }
 
 impl Deref for BlockReceiver {
-    type Target = async_channel::Receiver<Block>;
+    type Target = kanal::AsyncReceiver<Block>;
 
     fn deref(&self) -> &Self::Target {
         &self.receiver

@@ -100,7 +100,7 @@ impl Default for Config {
 pub struct Engine<S: Store> {
     /// Priority queue of requests received from peers.
     peer_task_queue: PeerTaskQueue<Cid, TaskData, TaskMerger>,
-    outbox: async_channel::Receiver<Result<Envelope>>,
+    outbox: kanal::AsyncReceiver<Result<Envelope>>,
     blockstore_manager: Arc<RwLock<BlockstoreManager<S>>>,
     ledger_map: RwLock<AHashMap<PeerId, Arc<Mutex<Ledger>>>>,
     /// Tracks which peers are waiting for a Cid,
@@ -125,7 +125,7 @@ impl<S: Store> Engine<S> {
         // TODO: insert options for peertaskqueue
 
         // TODO: limit?
-        let outbox = async_channel::bounded(1024);
+        let outbox = kanal::bounded_async(1024);
         let work_signal = Arc::new(Notify::new());
 
         let task_merger = TaskMerger::default();
@@ -288,7 +288,7 @@ impl<S: Store> Engine<S> {
         }
     }
 
-    pub fn outbox(&self) -> async_channel::Receiver<Result<Envelope>> {
+    pub fn outbox(&self) -> kanal::AsyncReceiver<Result<Envelope>> {
         self.outbox.clone()
     }
 

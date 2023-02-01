@@ -24,7 +24,7 @@ use libp2p::swarm::{
     NotifyHandler, PollParameters,
 };
 use libp2p::{Multiaddr, PeerId};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 use tracing::{debug, trace, warn};
 
@@ -71,9 +71,9 @@ pub struct Bitswap<S: Store> {
     pause_dialing: bool,
     client: Client<S>,
     server: Option<Server<S>>,
-    incoming_messages: mpsc::Sender<(PeerId, BitswapMessage)>,
-    peers_connected: mpsc::Sender<PeerId>,
-    peers_disconnected: mpsc::Sender<PeerId>,
+    incoming_messages: kanal::AsyncSender<(PeerId, BitswapMessage)>,
+    peers_connected: kanal::AsyncSender<PeerId>,
+    peers_disconnected: kanal::AsyncSender<PeerId>,
     _workers: Arc<Vec<JoinHandle<()>>>,
 }
 
@@ -146,9 +146,9 @@ impl<S: Store> Bitswap<S> {
         };
         let client = Client::new(network.clone(), store, cb, config.client).await;
 
-        let (sender_msg, mut receiver_msg) = mpsc::channel(2048);
-        let (sender_con, mut receiver_con) = mpsc::channel(2048);
-        let (sender_dis, mut receiver_dis) = mpsc::channel(2048);
+        let (sender_msg, receiver_msg) = kanal::bounded_async::<(PeerId, BitswapMessage)>(2048);
+        let (sender_con, receiver_con) = kanal::bounded_async(2048);
+        let (sender_dis, receiver_dis) = kanal::bounded_async(2048);
 
         let mut workers = Vec::new();
         workers.push(tokio::task::spawn({
@@ -157,7 +157,7 @@ impl<S: Store> Bitswap<S> {
 
             async move {
                 // process messages serially but without blocking the p2p loop
-                while let Some((peer, message)) = receiver_msg.recv().await {
+                while let Ok((peer, message)) = receiver_msg.recv().await {
                     if let Some(ref server) = server {
                         futures::future::join(
                             client.receive_message(&peer, &message),
@@ -177,7 +177,7 @@ impl<S: Store> Bitswap<S> {
 
             async move {
                 // process messages serially but without blocking the p2p loop
-                while let Some(peer) = receiver_con.recv().await {
+                while let Ok(peer) = receiver_con.recv().await {
                     if let Some(ref server) = server {
                         futures::future::join(
                             client.peer_connected(&peer),
@@ -197,7 +197,7 @@ impl<S: Store> Bitswap<S> {
 
             async move {
                 // process messages serially but without blocking the p2p loop
-                while let Some(peer) = receiver_dis.recv().await {
+                while let Ok(peer) = receiver_dis.recv().await {
                     if let Some(ref server) = server {
                         futures::future::join(
                             client.peer_disconnected(&peer),
@@ -886,7 +886,7 @@ mod tests {
             let ids: Vec<_> = blocks.iter().map(|b| *b.cid()).collect();
             let session = swarm2_bs.client().new_session().await;
             let (blocks_receiver, _guard) = session.get_blocks(&ids).await.unwrap().into_parts();
-            let mut results: Vec<_> = blocks_receiver.collect().await;
+            let mut results: Vec<_> = blocks_receiver.stream().collect().await;
 
             results.sort();
             blocks.sort();

@@ -13,7 +13,6 @@ use iroh_unixfs::{
 };
 use libp2p::{Multiaddr, PeerId};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Receiver;
 use tokio::{sync::Mutex, task::JoinHandle};
 use tracing::{error, warn};
 
@@ -130,7 +129,10 @@ impl ContentLoader for Loader {
 }
 
 impl P2pNode {
-    pub async fn new(port: u16, db_path: &Path) -> Result<(Self, Receiver<NetworkEvent>)> {
+    pub async fn new(
+        port: u16,
+        db_path: &Path,
+    ) -> Result<(Self, kanal::AsyncReceiver<NetworkEvent>)> {
         let rpc_p2p_addr_server = Addr::new_mem();
         let rpc_p2p_addr_client = rpc_p2p_addr_server.clone();
         let rpc_store_addr_server = Addr::new_mem();

@@ -300,7 +300,7 @@ pub struct LoaderContext {
 }
 
 impl LoaderContext {
-    pub fn from_path(id: ContextId, closer: async_channel::Sender<ContextId>) -> Self {
+    pub fn from_path(id: ContextId, closer: kanal::AsyncSender<ContextId>) -> Self {
         trace!("new loader context: {:?}", id);
         LoaderContext {
             id,
@@ -323,7 +323,8 @@ impl Drop for LoaderContext {
                 .try_lock()
                 .expect("last reference, no lock")
                 .closer
-                .send_blocking(self.id)
+                .as_sync()
+                .send(self.id)
             {
                 warn!(
                     "failed to send session stop for session {}: {:?}",
@@ -357,7 +358,7 @@ impl From<ContextId> for u64 {
 
 #[derive(Debug)]
 pub struct InnerLoaderContext {
-    closer: async_channel::Sender<ContextId>,
+    closer: kanal::AsyncSender<ContextId>,
 }
 
 #[async_trait]

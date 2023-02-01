@@ -15,7 +15,6 @@ exclude = [
 
 [dependencies]
 anyhow.workspace = true
-async-channel.workspace = true
 async-stream.workspace = true
 async-trait.workspace = true
 bs58.workspace = true
@@ -26,6 +25,7 @@ iroh-metrics = { workspace = true, features = ["resolver", "gateway"] }
 iroh-rpc-client.workspace = true
 iroh-util.workspace = true
 iroh-unixfs.workspace = true
+kanal.workspace = true
 libipld.workspace = true
 libp2p.workspace = true
 serde = { workspace = true, features = ["derive"] }

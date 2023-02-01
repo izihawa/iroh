@@ -8,7 +8,6 @@ use iroh_resolver::resolver::{Out, OutPrettyReader, OutType, Path, Resolver, Uni
 use iroh_unixfs::Link;
 use libp2p::gossipsub::{GossipsubMessage, MessageId, TopicHash};
 use libp2p::PeerId;
-use tokio::sync::mpsc::{channel, Receiver as ChannelReceiver};
 use tokio::task::JoinHandle;
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, info, warn};
@@ -22,17 +21,17 @@ use crate::{
 #[derive(Debug)]
 pub struct Receiver {
     p2p: P2pNode,
-    gossip_messages: ChannelReceiver<(MessageId, PeerId, GossipsubMessage)>,
+    gossip_messages: kanal::AsyncReceiver<(MessageId, PeerId, GossipsubMessage)>,
     gossip_task: JoinHandle<()>,
 }
 
 impl Receiver {
     pub async fn new(port: u16, db_path: &std::path::Path) -> Result<Self> {
-        let (p2p, mut events) = P2pNode::new(port, db_path).await?;
-        let (s, r) = channel(1024);
+        let (p2p, events) = P2pNode::new(port, db_path).await?;
+        let (s, r) = kanal::bounded_async(1024);
 
         let gossip_task = tokio::task::spawn(async move {
-            while let Some(event) = events.recv().await {
+            while let Ok(event) = events.recv().await {
                 if let NetworkEvent::Gossipsub(iroh_p2p::GossipsubEvent::Message {
                     from,
                     id,
@@ -56,7 +55,7 @@ impl Receiver {
         info!("connecting");
         let Receiver {
             p2p,
-            mut gossip_messages,
+            gossip_messages,
             gossip_task,
         } = self;
         let p2p_rpc = p2p.rpc().try_p2p()?;
@@ -69,7 +68,7 @@ impl Receiver {
 
         let expected_sender = ticket.peer_id;
         let resolver = p2p.resolver().clone();
-        let (progress_sender, progress_receiver) = channel(1024);
+        let (progress_sender, progress_receiver) = tokio::sync::mpsc::channel(1024);
         let (data_sender, data_receiver) = oneshot();
 
         // add provider
@@ -85,7 +84,7 @@ impl Receiver {
         let gossip_task_source = tokio::task::spawn(async move {
             let mut data_sender = Some(data_sender);
 
-            while let Some((_id, from, message)) = gossip_messages.recv().await {
+            while let Ok((_id, from, message)) = gossip_messages.recv().await {
                 if from == expected_sender {
                     match bincode::deserialize(&message.data) {
                         Ok(SenderMessage::Start { root, num_parts }) => {
@@ -171,7 +170,8 @@ pub struct Transfer {
     gossip_task: JoinHandle<()>,
     gossip_task_source: JoinHandle<()>,
     data_receiver: Option<OneShotReceiver<Result<Out>>>,
-    progress_receiver: Option<ChannelReceiver<std::result::Result<ProgressEvent, String>>>,
+    progress_receiver:
+        Option<tokio::sync::mpsc::Receiver<std::result::Result<ProgressEvent, String>>>,
 }
 
 impl Transfer {
