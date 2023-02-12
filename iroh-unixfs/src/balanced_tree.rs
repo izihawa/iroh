@@ -54,10 +54,10 @@ pub struct LinkInfo {
 }
 
 impl LinkInfo {
-    pub fn new(raw_data_len: u64, encoded_len: u64) -> LinkInfo{
+    pub fn new(raw_data_len: u64, encoded_len: u64) -> LinkInfo {
         LinkInfo {
             raw_data_len,
-            encoded_len
+            encoded_len,
         }
     }
 }
