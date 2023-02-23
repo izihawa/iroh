@@ -34,7 +34,7 @@ use std::{
 use iroh_resolver::Path;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
-use tracing::info_span;
+use tracing::{error, info_span};
 use url::Url;
 use urlencoding::encode;
 
@@ -593,6 +593,7 @@ async fn serve_raw<T: ContentLoader + Unpin>(
             add_ipfs_roots_headers(&mut headers, &metadata);
             add_content_length_header(&mut headers, metadata.size);
 
+            error!(error = "raw adding range headers", range = ?range, metadata_size = metadata.size);
             if let Some(mut capped_range) = range {
                 if let Some(size) = metadata.size {
                     capped_range.end = std::cmp::min(capped_range.end, size);
@@ -776,6 +777,7 @@ async fn serve_fs<T: ContentLoader + Unpin>(
                             range.end = std::cmp::min(range.end, size);
                         }
                         add_etag_range(&mut headers, range.clone());
+                        error!(error = "fs file adding range headers", range = ?range, metadata_size = metadata.size);
                         add_content_range_headers(&mut headers, range, metadata.size);
                         Ok(GatewayResponse::new(
                             StatusCode::PARTIAL_CONTENT,
@@ -796,6 +798,7 @@ async fn serve_fs<T: ContentLoader + Unpin>(
             // todo(arqu): error on no size
             // todo(arqu): add lazy seeking
             add_cache_control_headers(&mut headers, &metadata);
+            error!(error = "fs raw adding range headers", range = ?range, metadata_size = metadata.size);
             add_content_length_header(
                 &mut headers,
                 range.map(|range| range.end - range.start).or(metadata.size),
