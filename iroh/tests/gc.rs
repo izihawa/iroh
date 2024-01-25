@@ -65,7 +65,7 @@ async fn gc_test_node() -> (
 }
 
 async fn step(evs: &flume::Receiver<iroh_bytes::store::Event>) {
-    for _ in 0..3 {
+    for _ in 0..10 {
         while let Ok(ev) = evs.recv_async().await {
             if let iroh_bytes::store::Event::GcCompleted = ev {
                 break;
