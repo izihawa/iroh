@@ -68,6 +68,7 @@ async fn step(evs: &flume::Receiver<iroh_bytes::store::Event>) {
     for _ in 0..3 {
         while let Ok(ev) = evs.recv_async().await {
             if let iroh_bytes::store::Event::GcCompleted = ev {
+                tracing::error!("got gc completed event");
                 break;
             }
         }
@@ -198,7 +199,7 @@ mod flat {
 
     use iroh_bytes::{
         hashseq::HashSeq,
-        store::{PartialMap, PartialMapEntry, Store},
+        store::{PartialMap, PartialMapEntry, ReadableStore, Store},
         BlobFormat, HashAndFormat, Tag, TempTag, IROH_BLOCK_SIZE,
     };
 
@@ -483,6 +484,15 @@ mod flat {
                 deleted.push(*tt.hash());
             }
         }
+        let f = bao_store.blobs()?.collect::<io::Result<Vec<_>>>()?;
+        let p = bao_store.partial_blobs()?.collect::<io::Result<Vec<_>>>()?;
+        tracing::error!(
+            "creation phase is over, remaining full {} partial {}",
+            f.len(),
+            p.len()
+        );
+        tracing::error!("f: {:?}", f);
+        tracing::error!("p: {:?}", p);
         step(&evs).await;
 
         tracing::info!(

@@ -1105,6 +1105,7 @@ impl Store {
         // for a short time we will have neither partial nor complete
         let write_tx = self.0.db.begin_write().map_err(to_io_err)?;
         {
+            tracing::debug!("removing from partial {}", hash);
             let mut partial_table = write_tx.open_table(PARTIAL_TABLE).map_err(to_io_err)?;
             partial_table.remove(hash).map_err(to_io_err)?;
         }
@@ -1117,6 +1118,7 @@ impl Store {
         }
         let write_tx = self.0.db.begin_write().map_err(to_io_err)?;
         {
+            tracing::debug!("adding to complete {}", hash);
             let mut full_table = write_tx.open_table(COMPLETE_TABLE).map_err(to_io_err)?;
             let mut entry = match full_table.get(hash).map_err(to_io_err)? {
                 Some(entry) => entry.value(),

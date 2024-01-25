@@ -357,7 +357,11 @@ async fn gc_mark_task<'a>(
 }
 
 async fn gc_sweep_task<'a>(store: &'a impl Store, co: &Co<GcSweepEvent>) -> anyhow::Result<()> {
-    let blobs = store.blobs()?.chain(store.partial_blobs()?);
+    let blobs = store
+        .blobs()?
+        .chain(store.partial_blobs()?)
+        .collect::<Vec<_>>();
+    tracing::info!("gc_sweep total blobs are {}", blobs.len());
     let mut count = 0;
     let mut batch = Vec::new();
     for hash in blobs {
