@@ -1129,6 +1129,16 @@ impl Store {
         }
         write_tx.commit().map_err(to_io_err)?;
         drop(complete_io_guard);
+        let tx = self.0.db.begin_write().map_err(to_io_err)?;
+        {
+            let full_table = tx.open_table(COMPLETE_TABLE).map_err(to_io_err)?;
+            if let Some(_entry) = full_table.get(hash).map_err(to_io_err)? {
+                tracing::info!("it is there!")
+            } else {
+                tracing::error!("gone?")
+            }
+            drop(full_table);
+        }
         Ok(())
     }
 

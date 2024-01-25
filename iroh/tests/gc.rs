@@ -468,7 +468,7 @@ mod flat {
         let node = wrap_in_node(bao_store.clone(), Duration::from_secs(2)).await;
         let evs = attach_db_events(&node).await;
 
-        let mut deleted = Vec::new();
+        let mut dead = Vec::new();
         let mut live = Vec::new();
         // download
         for i in 0..100 {
@@ -481,11 +481,21 @@ mod flat {
                     .await?;
                 live.push(*tt.hash());
             } else {
-                deleted.push(*tt.hash());
+                dead.push(*tt.hash());
             }
         }
-        let f = bao_store.blobs()?.collect::<io::Result<Vec<_>>>()?;
-        let p = bao_store.partial_blobs()?.collect::<io::Result<Vec<_>>>()?;
+        let f = bao_store
+            .blobs()?
+            .collect::<io::Result<Vec<_>>>()?
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>();
+        let p = bao_store
+            .partial_blobs()?
+            .collect::<io::Result<Vec<_>>>()?
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>();
         tracing::error!(
             "creation phase is over, remaining full {} partial {}",
             f.len(),
@@ -497,10 +507,10 @@ mod flat {
 
         tracing::info!(
             "checking for {} deleted and {} live",
-            deleted.len(),
+            dead.len(),
             live.len()
         );
-        for h in deleted.iter() {
+        for h in dead.iter() {
             assert!(count_partial_data(h)? == 0);
             assert!(count_partial_outboard(h)? == 0);
             assert_eq!(
