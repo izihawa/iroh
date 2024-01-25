@@ -493,13 +493,21 @@ mod flat {
         for h in deleted.iter() {
             assert!(count_partial_data(h)? == 0);
             assert!(count_partial_outboard(h)? == 0);
-            assert_eq!(bao_store.entry_status(h)?, EntryStatus::NotFound);
+            assert_eq!(
+                bao_store.entry_status(h)?,
+                EntryStatus::NotFound,
+                "error in meta for hash {h}"
+            );
         }
 
         for h in live.iter() {
             assert!(count_partial_data(h)? == 0);
             assert!(count_partial_outboard(h)? == 0);
-            assert_eq!(bao_store.entry_status(h)?, EntryStatus::Complete);
+            assert_eq!(
+                bao_store.entry_status(h)?,
+                EntryStatus::Complete,
+                "error in meta for hash {h}"
+            );
         }
 
         node.shutdown();

@@ -1038,6 +1038,7 @@ impl Store {
             let mut full_table = write_tx.open_table(COMPLETE_TABLE).map_err(to_io_err)?;
             let mut partial_table = write_tx.open_table(PARTIAL_TABLE).map_err(to_io_err)?;
             for hash in hashes.iter().copied() {
+                println!("removing hash from full_table {hash}");
                 if let Some(entry) = full_table.remove(hash).map_err(to_io_err)? {
                     let entry = entry.value();
                     if entry.owned_data {
@@ -1047,6 +1048,7 @@ impl Store {
                         outboard.push(self.owned_outboard_path(&hash));
                     }
                 }
+                println!("removing hash from partial_table {hash}");
                 let e = partial_table.remove(hash).map_err(to_io_err)?;
                 if let Some(partial) = e {
                     let partial = partial.value();
