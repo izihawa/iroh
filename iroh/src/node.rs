@@ -1782,6 +1782,12 @@ fn handle_rpc_request<D: BaoStore, E: ServiceEndpoint<ProviderService>>(
                 })
                 .await
             }
+            DocGetSyncPeers(msg) => {
+                chan.rpc(msg, handler, |handler, req| async move {
+                    handler.inner.sync.doc_get_sync_peers(req).await
+                })
+                .await
+            }
         }
     });
 }
