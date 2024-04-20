@@ -28,8 +28,8 @@ use iroh_net::{
 use iroh_docs::{
     actor::OpenState,
     store::{DownloadPolicy, Query},
-    Author, AuthorId, Capability, CapabilityKind, DocTicket, Entry, NamespaceId, PeerIdBytes,
-    SignedEntry,
+    Author, AuthorId, Capability, CapabilityKind, DocTicket, Entry, NamespaceId, NamespaceSecret,
+    PeerIdBytes, SignedEntry,
 };
 use quic_rpc::{
     message::{BidiStreaming, BidiStreamingMsg, Msg, RpcMsg, ServerStreaming, ServerStreamingMsg},
@@ -521,6 +521,24 @@ impl RpcMsg<RpcService> for AuthorImportRequest {
 pub struct AuthorImportResponse {
     /// The author id of the imported author
     pub author_id: AuthorId,
+}
+
+/// Export secret key
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DocExportSecretKeyRequest {
+    /// The document id
+    pub doc_id: NamespaceId,
+}
+
+impl RpcMsg<RpcService> for DocExportSecretKeyRequest {
+    type Response = RpcResult<DocExportSecretKeyResponse>;
+}
+
+/// Response to [`DocExportSecretKeyRequest`]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DocExportSecretKeyResponse {
+    /// The namespace secret key
+    pub namespace_secret: NamespaceSecret,
 }
 
 /// Subscribe to events for a document.
@@ -1100,6 +1118,7 @@ pub enum Request {
     DocGetDownloadPolicy(DocGetDownloadPolicyRequest),
     DocSetDownloadPolicy(DocSetDownloadPolicyRequest),
     DocGetSyncPeers(DocGetSyncPeersRequest),
+    DocExportSecretKey(DocExportSecretKeyRequest),
 
     AuthorList(AuthorListRequest),
     AuthorCreate(AuthorCreateRequest),
@@ -1159,6 +1178,7 @@ pub enum Response {
     DocGetDownloadPolicy(RpcResult<DocGetDownloadPolicyResponse>),
     DocSetDownloadPolicy(RpcResult<DocSetDownloadPolicyResponse>),
     DocGetSyncPeers(RpcResult<DocGetSyncPeersResponse>),
+    DocExportSecretKey(RpcResult<DocExportSecretKeyResponse>),
     StreamCreated(RpcResult<StreamCreated>),
 
     AuthorList(RpcResult<AuthorListResponse>),

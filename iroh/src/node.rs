@@ -179,6 +179,11 @@ impl<D: BaoStore> Node<D> {
         self.inner.cancel_token.clone()
     }
 
+    /// Expose redb database
+    pub fn db(&self) -> &D {
+        &self.inner.db
+    }
+
     /// Returns a protocol handler for an ALPN.
     ///
     /// This downcasts to the concrete type and returns `None` if the handler registered for `alpn`

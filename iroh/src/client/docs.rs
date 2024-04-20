@@ -16,8 +16,8 @@ use iroh_blobs::{export::ExportProgress, store::ExportMode, Hash};
 use iroh_docs::{
     actor::OpenState,
     store::{DownloadPolicy, Query},
-    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, PeerIdBytes,
-    RecordIdentifier,
+    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, NamespaceSecret,
+    PeerIdBytes, RecordIdentifier,
 };
 use iroh_net::NodeAddr;
 use portable_atomic::{AtomicBool, Ordering};
@@ -27,10 +27,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::rpc_protocol::{
     DocCloseRequest, DocCreateRequest, DocDelRequest, DocDelResponse, DocDropRequest,
-    DocExportFileRequest, DocGetDownloadPolicyRequest, DocGetExactRequest, DocGetManyRequest,
-    DocGetSyncPeersRequest, DocImportFileRequest, DocImportRequest, DocLeaveRequest,
-    DocListRequest, DocOpenRequest, DocSetDownloadPolicyRequest, DocSetHashRequest, DocSetRequest,
-    DocShareRequest, DocStartSyncRequest, DocStatusRequest, DocSubscribeRequest, RpcService,
+    DocExportFileRequest, DocExportSecretKeyRequest, DocGetDownloadPolicyRequest,
+    DocGetExactRequest, DocGetManyRequest, DocGetSyncPeersRequest, DocImportFileRequest,
+    DocImportRequest, DocLeaveRequest, DocListRequest, DocOpenRequest, DocSetDownloadPolicyRequest,
+    DocSetHashRequest, DocSetRequest, DocShareRequest, DocStartSyncRequest, DocStatusRequest,
+    DocSubscribeRequest, RpcService,
 };
 
 #[doc(inline)]
@@ -109,6 +110,15 @@ impl Client {
         self.rpc.rpc(DocOpenRequest { doc_id: id }).await??;
         let doc = Doc::new(self.rpc.clone(), id);
         Ok(Some(doc))
+    }
+
+    /// Get a [`Doc`] client for a single document. Return None if the document cannot be found.
+    pub async fn export_secret_key(&self, id: NamespaceId) -> Result<NamespaceSecret> {
+        let res = self
+            .rpc
+            .rpc(DocExportSecretKeyRequest { doc_id: id })
+            .await??;
+        Ok(res.namespace_secret)
     }
 }
 

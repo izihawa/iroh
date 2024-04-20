@@ -14,7 +14,8 @@ use crate::rpc_protocol::{
     AuthorImportRequest, AuthorImportResponse, AuthorListRequest, AuthorListResponse,
     AuthorSetDefaultRequest, AuthorSetDefaultResponse, DocCloseRequest, DocCloseResponse,
     DocCreateRequest, DocCreateResponse, DocDelRequest, DocDelResponse, DocDropRequest,
-    DocDropResponse, DocGetDownloadPolicyRequest, DocGetDownloadPolicyResponse, DocGetExactRequest,
+    DocDropResponse, DocExportSecretKeyRequest, DocExportSecretKeyResponse,
+    DocGetDownloadPolicyRequest, DocGetDownloadPolicyResponse, DocGetExactRequest,
     DocGetExactResponse, DocGetManyRequest, DocGetManyResponse, DocGetSyncPeersRequest,
     DocGetSyncPeersResponse, DocImportRequest, DocImportResponse, DocLeaveRequest,
     DocLeaveResponse, DocListRequest, DocListResponse, DocOpenRequest, DocOpenResponse,
@@ -304,5 +305,13 @@ impl DocsEngine {
     ) -> RpcResult<DocGetSyncPeersResponse> {
         let peers = self.sync.get_sync_peers(req.doc_id).await?;
         Ok(DocGetSyncPeersResponse { peers })
+    }
+
+    pub async fn doc_export_secret_key(
+        &self,
+        req: DocExportSecretKeyRequest,
+    ) -> RpcResult<DocExportSecretKeyResponse> {
+        let namespace_secret = self.sync.export_secret_key(req.doc_id).await?;
+        Ok(DocExportSecretKeyResponse { namespace_secret })
     }
 }

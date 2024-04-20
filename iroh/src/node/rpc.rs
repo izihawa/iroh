@@ -333,6 +333,12 @@ impl<D: BaoStore> Handler<D> {
                 })
                 .await
             }
+            DocExportSecretKey(msg) => {
+                chan.rpc(msg, self, |handler, req| {
+                    handler.with_docs(|docs| async move { docs.doc_export_secret_key(req).await })
+                })
+                .await
+            }
         }
     }
 
