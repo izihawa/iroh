@@ -20,8 +20,8 @@ use iroh_blobs::{export::ExportProgress, store::ExportMode, Hash};
 use iroh_docs::{
     actor::OpenState,
     store::{DownloadPolicy, Query},
-    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, PeerIdBytes,
-    RecordIdentifier,
+    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, NamespaceSecret,
+    PeerIdBytes, RecordIdentifier,
 };
 use iroh_net::NodeAddr;
 use portable_atomic::{AtomicBool, Ordering};
@@ -31,10 +31,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::rpc_protocol::docs::{
     CloseRequest, CreateRequest, DelRequest, DelResponse, DocListRequest, DocSubscribeRequest,
-    DropRequest, ExportFileRequest, GetDownloadPolicyRequest, GetExactRequest, GetManyRequest,
-    GetSyncPeersRequest, ImportFileRequest, ImportRequest, LeaveRequest, OpenRequest,
-    SetDownloadPolicyRequest, SetHashRequest, SetRequest, ShareRequest, StartSyncRequest,
-    StatusRequest,
+    DropRequest, ExportFileRequest, ExportSecretKeyRequest, GetDownloadPolicyRequest,
+    GetExactRequest, GetManyRequest, GetSyncPeersRequest, ImportFileRequest, ImportRequest,
+    LeaveRequest, OpenRequest, SetDownloadPolicyRequest, SetHashRequest, SetRequest, ShareRequest,
+    StartSyncRequest, StatusRequest,
 };
 use crate::rpc_protocol::RpcService;
 
@@ -66,6 +66,12 @@ impl Client {
     pub async fn drop_doc(&self, doc_id: NamespaceId) -> Result<()> {
         self.rpc.rpc(DropRequest { doc_id }).await??;
         Ok(())
+    }
+
+    /// Export secret key
+    pub async fn export_secret_key(&self, doc_id: NamespaceId) -> Result<NamespaceSecret> {
+        let response = self.rpc.rpc(ExportSecretKeyRequest { doc_id }).await??;
+        Ok(response.secret)
     }
 
     /// Imports a document from a namespace capability.
