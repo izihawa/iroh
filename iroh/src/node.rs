@@ -155,6 +155,11 @@ impl<D: BaoStore> Node<D> {
         &self.inner.endpoint
     }
 
+    /// Return db
+    pub fn db(&self) -> &D {
+        &self.inner.db
+    }
+
     /// The address on which the node socket is bound.
     ///
     /// Note that this could be an unspecified address, if you need an address on which you

@@ -8,7 +8,7 @@ use iroh_base::{
 use iroh_blobs::{export::ExportProgress, store::ExportMode, Hash};
 use iroh_docs::{
     actor::OpenState, engine::LiveEvent, store::DownloadPolicy, store::Query, AuthorId, Capability,
-    CapabilityKind, DocTicket, Entry, NamespaceId, PeerIdBytes, SignedEntry,
+    CapabilityKind, DocTicket, Entry, NamespaceId, NamespaceSecret, PeerIdBytes, SignedEntry,
 };
 use iroh_net::NodeAddr;
 use nested_enum_utils::enum_conversions;
@@ -66,6 +66,7 @@ pub enum Request {
     SetDownloadPolicy(SetDownloadPolicyRequest),
     #[rpc(response = RpcResult<GetSyncPeersResponse>)]
     GetSyncPeers(GetSyncPeersRequest),
+    ExportSecretKey(ExportSecretKeyRequest),
 }
 
 #[allow(missing_docs)]
@@ -94,6 +95,7 @@ pub enum Response {
     SetDownloadPolicy(RpcResult<SetDownloadPolicyResponse>),
     GetSyncPeers(RpcResult<GetSyncPeersResponse>),
     StreamCreated(RpcResult<StreamCreated>),
+    ExportSecretKey(RpcResult<ExportSecretKeyResponse>)
 }
 
 /// Subscribe to events for a document.
@@ -235,6 +237,23 @@ pub struct DropRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DropResponse {}
 
+/// Get secret key
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExportSecretKeyRequest {
+    /// The document id
+    pub doc_id: NamespaceId,
+}
+
+impl RpcMsg<RpcService> for ExportSecretKeyRequest {
+    type Response = RpcResult<ExportSecretKeyResponse>;
+}
+
+/// Response to [`ExportSecretKeyRequest`]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExportSecretKeyResponse {
+    pub(crate) secret: NamespaceSecret,
+}
+
 /// Set an entry in a document
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SetRequest {
@@ -266,7 +285,7 @@ pub struct ImportFileRequest {
     pub doc_id: NamespaceId,
     /// Author of this entry.
     pub author_id: AuthorId,
-    /// Key of this entry.
+    /// Key of this entry.ExportSecretKeyResponse
     pub key: Bytes,
     /// The filepath to the data
     ///
