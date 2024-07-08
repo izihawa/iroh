@@ -6,28 +6,28 @@ use iroh_base::rpc::RpcResult;
 use iroh_blobs::{store::Store as BaoStore, BlobFormat};
 use iroh_docs::{Author, DocTicket, NamespaceSecret};
 
-use crate::{
-    client::docs::ShareMode,
-    node::DocsEngine,
-    rpc_protocol::{
-        authors::{
-            CreateRequest, CreateResponse, DeleteRequest, DeleteResponse, ExportRequest,
-            ExportResponse, GetDefaultRequest, GetDefaultResponse, ImportRequest, ImportResponse,
-            ListRequest as AuthorListRequest, ListResponse as AuthorListResponse,
-            SetDefaultRequest, SetDefaultResponse,
-        },
-        docs::{
-            CloseRequest, CloseResponse, CreateRequest as DocCreateRequest,
-            CreateResponse as DocCreateResponse, DelRequest, DelResponse, DocListRequest,
-            DocSubscribeRequest, DocSubscribeResponse, DropRequest, DropResponse,
-            GetDownloadPolicyRequest, GetDownloadPolicyResponse, GetExactRequest, GetExactResponse,
-            GetManyRequest, GetManyResponse, GetSyncPeersRequest, GetSyncPeersResponse,
-            ImportRequest as DocImportRequest, ImportResponse as DocImportResponse, LeaveRequest,
-            LeaveResponse, ListResponse as DocListResponse, OpenRequest, OpenResponse,
-            SetDownloadPolicyRequest, SetDownloadPolicyResponse, SetHashRequest, SetHashResponse,
-            SetRequest, SetResponse, ShareRequest, ShareResponse, StartSyncRequest,
-            StartSyncResponse, StatusRequest, StatusResponse,
-        },
+use crate::client::docs::ShareMode;
+use crate::node::DocsEngine;
+
+use crate::rpc_protocol::{
+    authors::{
+        CreateRequest, CreateResponse, DeleteRequest, DeleteResponse, ExportRequest,
+        ExportResponse, GetDefaultRequest, GetDefaultResponse, ImportRequest, ImportResponse,
+        ListRequest as AuthorListRequest, ListResponse as AuthorListResponse, SetDefaultRequest,
+        SetDefaultResponse,
+    },
+    docs::{
+        CloseRequest, CloseResponse, CreateRequest as DocCreateRequest,
+        CreateResponse as DocCreateResponse, DelRequest, DelResponse, DocListRequest,
+        DocSubscribeRequest, DocSubscribeResponse, DropRequest, DropResponse,
+        ExportSecretKeyRequest, ExportSecretKeyResponse, GetDownloadPolicyRequest,
+        GetDownloadPolicyResponse, GetExactRequest, GetExactResponse, GetManyRequest,
+        GetManyResponse, GetSyncPeersRequest, GetSyncPeersResponse,
+        ImportRequest as DocImportRequest, ImportResponse as DocImportResponse, LeaveRequest,
+        LeaveResponse, ListResponse as DocListResponse, OpenRequest, OpenResponse,
+        SetDownloadPolicyRequest, SetDownloadPolicyResponse, SetHashRequest, SetHashResponse,
+        SetRequest, SetResponse, ShareRequest, ShareResponse, StartSyncRequest, StartSyncResponse,
+        StatusRequest, StatusResponse,
     },
 };
 
@@ -306,5 +306,13 @@ impl DocsEngine {
     ) -> RpcResult<GetSyncPeersResponse> {
         let peers = self.sync.get_sync_peers(req.doc_id).await?;
         Ok(GetSyncPeersResponse { peers })
+    }
+
+    pub async fn export_secret_key(
+        &self,
+        req: ExportSecretKeyRequest,
+    ) -> RpcResult<ExportSecretKeyResponse> {
+        let secret = self.sync.export_secret_key(req.doc_id).await?;
+        Ok(ExportSecretKeyResponse { secret })
     }
 }

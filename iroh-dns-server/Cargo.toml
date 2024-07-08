@@ -30,7 +30,7 @@ mainline = "2.0.1"
 parking_lot = "0.12.1"
 pkarr = { version = "2.2.0", features = [ "async", "relay", "dht"], default-features = false }
 rcgen = "0.12.1"
-redb = "2.0.0"
+redb = "2.1.2"
 regex = "1.10.3"
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 rustls-pemfile = { version = "2.1" }

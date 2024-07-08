@@ -35,7 +35,7 @@ num_enum = "0.7"
 postcard = { version = "1", default-features = false, features = ["alloc", "use-std", "experimental-derive"] }
 rand = "0.8.5"
 rand_core = "0.6.4"
-redb = { version = "2.0.0" }
+redb = { version = "2.1.2" }
 redb_v1  = { package = "redb", version = "1.5.1" }
 self_cell = "1.0.3"
 serde = { version = "1.0.164", features = ["derive"] }
