@@ -36,6 +36,8 @@ pub enum Request {
     Create(CreateRequest),
     #[rpc(response = RpcResult<DropResponse>)]
     Drop(DropRequest),
+    #[rpc(response = RpcResult<ExportSecretKeyResponse>)]
+    ExportSecretKey(ExportSecretKeyRequest),
     #[rpc(response = RpcResult<ImportResponse>)]
     Import(ImportRequest),
     #[rpc(response = RpcResult<SetResponse>)]
@@ -66,7 +68,6 @@ pub enum Request {
     SetDownloadPolicy(SetDownloadPolicyRequest),
     #[rpc(response = RpcResult<GetSyncPeersResponse>)]
     GetSyncPeers(GetSyncPeersRequest),
-    ExportSecretKey(ExportSecretKeyRequest),
 }
 
 #[allow(missing_docs)]
@@ -95,7 +96,7 @@ pub enum Response {
     SetDownloadPolicy(RpcResult<SetDownloadPolicyResponse>),
     GetSyncPeers(RpcResult<GetSyncPeersResponse>),
     StreamCreated(RpcResult<StreamCreated>),
-    ExportSecretKey(RpcResult<ExportSecretKeyResponse>)
+    ExportSecretKey(RpcResult<ExportSecretKeyResponse>),
 }
 
 /// Subscribe to events for a document.
@@ -242,10 +243,6 @@ pub struct DropResponse {}
 pub struct ExportSecretKeyRequest {
     /// The document id
     pub doc_id: NamespaceId,
-}
-
-impl RpcMsg<RpcService> for ExportSecretKeyRequest {
-    type Response = RpcResult<ExportSecretKeyResponse>;
 }
 
 /// Response to [`ExportSecretKeyRequest`]

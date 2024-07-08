@@ -20,8 +20,8 @@ use iroh_blobs::{export::ExportProgress, store::ExportMode, Hash};
 use iroh_docs::{
     actor::OpenState,
     store::{DownloadPolicy, Query},
-    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, PeerIdBytes,
-    RecordIdentifier,
+    AuthorId, Capability, CapabilityKind, ContentStatus, DocTicket, NamespaceId, NamespaceSecret,
+    PeerIdBytes, RecordIdentifier,
 };
 use iroh_net::NodeAddr;
 use portable_atomic::{AtomicBool, Ordering};
@@ -69,9 +69,9 @@ impl Client {
     }
 
     /// Export secret key
-    pub async fn export_secret_key(&self, doc_id: NamespaceId) -> Result<()> {
-        self.rpc.rpc(ExportSecretKeyRequest { doc_id }).await??;
-        Ok(())
+    pub async fn export_secret_key(&self, doc_id: NamespaceId) -> Result<NamespaceSecret> {
+        let response = self.rpc.rpc(ExportSecretKeyRequest { doc_id }).await??;
+        Ok(response.secret)
     }
 
     /// Imports a document from a namespace capability.
